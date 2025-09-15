@@ -1,0 +1,61 @@
+﻿@page "/counter"
+@using Learning_SignalR.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+@inject ICounterService CounterService
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount" disabled="@(!IsConnected)">Click me</button>
+
+@code {
+    private HubConnection? hubConnection;
+    private int currentCount;
+    public bool IsConnected =>
+        hubConnection?.State == HubConnectionState.Connected;
+    
+    
+    protected override async Task OnInitializedAsync()
+    {
+        currentCount = CounterService.GetCount();
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Navigation.ToAbsoluteUri("/chathub"))
+            .Build();
+
+        hubConnection.On<int>("ReceiveCount", (count) =>
+        {
+            currentCount = CounterService.GetCount();
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("Connect");
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    private Task IncrementCount()
+    {
+        CounterService.IncrementCount();
+        currentCount = CounterService.GetCount();
+        if (hubConnection is not null)
+        {
+            hubConnection.SendAsync("SendCount", CounterService.GetCount()).GetAwaiter().GetResult();
+        }
+        return Task.CompletedTask;
+    }
+
+}
