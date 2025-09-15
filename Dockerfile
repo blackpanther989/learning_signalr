@@ -7,7 +7,7 @@ RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-EXPOSE 80
+EXPOSE 8080
 
 COPY --from=build /app/publish ./
 
