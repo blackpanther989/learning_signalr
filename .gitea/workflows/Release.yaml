@@ -38,8 +38,11 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           REPO_NAME="${GITHUB_REPOSITORY##*/}"
-          echo "image=${DOCKER_USERNAME}/${REPO_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Image will be: ${DOCKER_USERNAME}/${REPO_NAME}"
+          # Lowercase and sanitize to Docker-compatible repo name
+          REPO_NAME_LOWER="$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g' | sed -E 's/^[._-]+|[._-]+$//g')"
+          USER_LOWER="$(echo "${DOCKER_USERNAME}" | tr '[:upper:]' '[:lower:]')"
+          echo "image=${USER_LOWER}/${REPO_NAME_LOWER}" >> "$GITHUB_OUTPUT"
+          echo "Image will be: ${USER_LOWER}/${REPO_NAME_LOWER}"
 
       - name: Set up QEMU
         if: ${{ steps.semver.outputs.version != '' }}
