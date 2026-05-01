@@ -1,0 +1,56 @@
+﻿@page "/chat"
+@using Learning_SignalR.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject IChatService ChatService
+
+@implements IDisposable
+
+<PageTitle>Chat</PageTitle>
+
+<h1>Chat</h1>
+
+<textarea class="form-control" readonly style="height: 300px;">@string.Join("\n", ChatService.Messages)</textarea>
+<input class="form-control" placeholder="Type a message..." @bind="Message" @bind:event="oninput" @onkeyup="HandleKeyUp" />
+
+<button class="btn btn-primary" @onclick="AddChat" disabled="@(!ChatService.IsConnected)">Send</button>
+
+@code {
+
+    private string Message { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ChatService.OnMessageReceived += HandleMessageReceived;
+        await ChatService.InitializeAsync();
+        await ChatService.GetAllMessages();
+    }
+
+    private void HandleMessageReceived()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddChat()
+    {
+        if (!string.IsNullOrWhiteSpace(Message))
+        {
+            await ChatService.SendMessage(Message);
+            Message = string.Empty;
+        }
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddChat();
+        }
+    }
+
+    public void Dispose()
+    {
+        ChatService.OnMessageReceived -= HandleMessageReceived;
+    }
+}

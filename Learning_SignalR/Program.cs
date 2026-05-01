@@ -19,6 +19,7 @@ builder.Services.AddResponseCompression(opts =>
 });
 
 builder.Services.AddSingleton<ICounterService>(new CounterService());
+builder.Services.AddScoped<IChatService, ChatService>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -40,6 +41,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+app.MapHub<CountHub>("/counthub");
 app.MapHub<ChatHub>("/chathub");
 
 app.Run();
