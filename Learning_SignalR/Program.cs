@@ -19,7 +19,7 @@ builder.Services.AddResponseCompression(opts =>
 });
 
 builder.Services.AddSingleton<ICounterService>(new CounterService());
-builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddSingleton<IChatService, ChatService>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

@@ -1,75 +1,33 @@
-﻿namespace Learning_SignalR.Services;
+﻿using System.Collections.Concurrent;
+using Microsoft.AspNetCore.SignalR;
+
+namespace Learning_SignalR.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 
 public interface IChatService
 {
-    Task InitializeAsync();
     Task SendMessage(string message);
-    Task GetAllMessages();
-    bool IsConnected { get; }
+    Task<List<string>>  GetAllMessages();
     IReadOnlyList<string> Messages { get; }
-    event Action? OnMessageReceived;
 }
 
-public class ChatService(NavigationManager navigationManager) : IChatService, IAsyncDisposable
+public class ChatService(IHubContext<ChatHub> _hubContext) : IChatService
 {
-    private static readonly List<string> messages = [];
-    private HubConnection? hubConnection;
+    private static readonly ConcurrentQueue<string> messages = [];
+  
+    public IReadOnlyList<string> Messages => messages.ToList().AsReadOnly();
 
-    public bool IsConnected =>
-        hubConnection?.State == HubConnectionState.Connected;
-
-    public IReadOnlyList<string> Messages => messages.AsReadOnly();
-
+    public Task<List<string>> GetAllMessages() => Task.FromResult(messages.ToList());
     public event Action? OnMessageReceived;
 
-    public async Task InitializeAsync()
-    {
-        if (hubConnection is not null) return;
-
-        hubConnection = new HubConnectionBuilder()
-            .WithUrl(navigationManager.ToAbsoluteUri("/chathub"))
-            .WithAutomaticReconnect()
-            .Build();
-
-        hubConnection.On<string>("ReceiveMessage", (msg) =>
-        {
-            //messages.Add(msg);
-            OnMessageReceived?.Invoke();
-        });
-
-        hubConnection.On<List<string>>("SendAllMessages", (msgs) =>
-        {
-         //   messages.AddRange(msgs);
-        });
-        
-        await hubConnection.StartAsync();
-        await hubConnection.SendAsync("Connect");
-    }
-
-    public async Task GetAllMessages()
-    {
-        if (hubConnection is not null && IsConnected)
-        {
-            await hubConnection.SendAsync("SendAllMessages", messages);
-        }
-    }
     
     public async Task SendMessage(string message)
     {
-        if (hubConnection is not null && IsConnected)
-        {
-            messages.Add(message);
-            await hubConnection.SendAsync("SendMessage", message);
-        }
-    }
+        messages.Enqueue(message);
+        OnMessageReceived?.Invoke();
+        await _hubContext.Clients.All.SendAsync("ReceiveMessage", message);
 
-    public async ValueTask DisposeAsync()
-    {
-        if (hubConnection is not null)
-        {
-            await hubConnection.DisposeAsync();
-        }
     }
+    
 }
